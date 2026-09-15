@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="多功能时钟">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+  <title>多功能时钟</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="app">
+
+    <!-- ===== 1. 时钟页：时钟 + 徒步路线动画 ===== -->
+    <section class="page page-clock active" id="page-clock">
+      <!-- 顶栏：世界时钟入口（右上角） -->
+      <header class="clock-topbar">
+        <button class="worldclock-entry" id="wc-open-btn">
+          <span class="worldclock-icon">🌏</span>
+          <span>世界时钟</span>
+        </button>
+      </header>
+      <div class="tz-label">北京时间</div>
+      <div class="time" id="time">00:00:00</div>
+      <div class="date" id="date">加载中…</div>
+
+      <!-- 徒步动画：待机时只留计时条，点开始后路线淡入 -->
+      <div class="hike-area compact" id="hike-area">
+        <div class="hike-view" id="hike-view">
+          <div class="chips hike-tabs" id="hike-tabs"></div>
+          <svg class="hike-svg" id="hike-svg" viewBox="0 0 480 140" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="hike-spots" id="hike-spots"></div>
+          <div class="hike-caption" id="hike-caption"></div>
+        </div>
+        <div class="hike-status" id="hike-status"></div>
+        <!-- 已徒步时长：严格绑定累积计时逻辑，HH:MM:SS -->
+        <div class="hike-duration">
+          <span class="hike-duration-label">已徒步</span>
+          <b class="hike-duration-time" id="hike-duration-time">00:00:00</b>
+          <span class="hike-duration-prog" id="hike-duration-prog">0.0 km · 0.0%</span>
+        </div>
+        <div class="hike-controls">
+          <!-- 拦截提示：另一条路线计时中点「开始」时出现 -->
+          <div class="hike-toast" id="hike-toast" hidden></div>
+          <label class="hike-speed">速度
+            <input type="range" id="hike-speed" min="3" max="7" step="0.5" value="4.5">
+            <b id="hike-speed-val">4.5</b> km/h
+          </label>
+          <div class="btn-row">
+            <button class="btn-primary hike-main-btn" id="hike-main-btn">开始计时</button>
+            <button class="hike-restart" id="hike-reset-btn">重置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 景点注解卡片：点击景点后从底部固定滑出 -->
+      <div class="hike-card" id="hike-card">
+        <div class="hike-card-head">
+          <b id="hike-card-name"></b>
+          <button class="hike-card-close" id="hike-card-close" aria-label="关闭">×</button>
+        </div>
+        <div class="hike-card-meta" id="hike-card-meta"></div>
+        <p class="hike-card-note" id="hike-card-note"></p>
+      </div>
+
+      <!-- 世界时钟弹窗：点击顶栏「世界时钟」按钮后从底部滑出 -->
+      <div class="wc-overlay" id="wc-overlay" hidden>
+        <div class="wc-sheet">
+          <div class="wc-sheet-head">
+            <b>世界时钟</b>
+            <button class="wc-sheet-close" id="wc-sheet-close" aria-label="关闭">×</button>
+          </div>
+          <ul class="wc-list" id="wc-list">
+            <li class="wc-item" data-tz="Asia/Shanghai" data-city="北京">
+              <span class="wc-city">北京</span>
+              <span class="wc-tz">UTC+8</span>
+              <b class="wc-time">--:--</b>
+            </li>
+            <li class="wc-item" data-tz="America/New_York" data-city="纽约">
+              <span class="wc-city">纽约</span>
+              <span class="wc-tz">UTC-5</span>
+              <b class="wc-time">--:--</b>
+            </li>
+            <li class="wc-item" data-tz="Europe/London" data-city="伦敦">
+              <span class="wc-city">伦敦</span>
+              <span class="wc-tz">UTC+0</span>
+              <b class="wc-time">--:--</b>
+            </li>
+            <li class="wc-item" data-tz="Europe/Paris" data-city="巴黎">
+              <span class="wc-city">巴黎</span>
+              <span class="wc-tz">UTC+1</span>
+              <b class="wc-time">--:--</b>
+            </li>
+            <li class="wc-item" data-tz="Asia/Tokyo" data-city="东京">
+              <span class="wc-city">东京</span>
+              <span class="wc-tz">UTC+9</span>
+              <b class="wc-time">--:--</b>
+            </li>
+            <li class="wc-item" data-tz="Australia/Sydney" data-city="悉尼">
+              <span class="wc-city">悉尼</span>
+              <span class="wc-tz">UTC+11</span>
+              <b class="wc-time">--:--</b>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 2. 功能页：四个大选项 ===== -->
+    <section class="page page-functions" id="page-functions">
+      <h2 class="page-title">功能</h2>
+      <div class="menu">
+        <button class="menu-item" data-open="page-alarm">
+          <span class="menu-icon" style="--c:#ff9f43">闹</span>
+          <span class="menu-text"><b>闹钟</b><i>闹钟与时间管理法</i></span>
+        </button>
+        <button class="menu-item" data-open="page-stopwatch">
+          <span class="menu-icon" style="--c:#34c77b">秒</span>
+          <span class="menu-text"><b>秒表</b><i>精确到百分之一秒，支持计次</i></span>
+        </button>
+        <button class="menu-item" data-open="page-countdown">
+          <span class="menu-icon" style="--c:#ff5c7a">倒</span>
+          <span class="menu-text"><b>倒计时</b><i>为任务设定时限</i></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== 3. 闹钟页 ===== -->
+    <section class="page page-sub" id="page-alarm">
+      <header class="topbar">
+        <button class="back" data-back="page-functions">‹</button>
+        <span>闹钟</span>
+      </header>
+      <div class="sub-body">
+        <div class="big-time" id="alarm-display">--:--:--</div>
+        <p class="hint" id="alarm-status">设好时长，点开始</p>
+
+        <div class="chips" id="alarm-presets">
+          <button data-min="5">5 分钟</button>
+          <button data-min="10">10 分钟</button>
+          <button data-min="20">20 分钟</button>
+          <button data-min="30">30 分钟</button>
+          <button data-min="45">45 分钟</button>
+          <button data-min="60">1 小时</button>
+          <button data-min="90">1.5 小时</button>
+        </div>
+
+        <div class="duration-row">
+          <label>时 <input id="alarm-h" type="number" min="0" max="23" value="0"></label>
+          <label>分 <input id="alarm-m" type="number" min="0" max="59" value="25"></label>
+          <label>秒 <input id="alarm-s" type="number" min="0" max="59" value="0"></label>
+        </div>
+
+        <button class="btn-primary" id="alarm-btn">开始</button>
+
+        <!-- 闹钟法：时间管理方法入口 -->
+        <button class="methods-toggle" id="methods-toggle">闹钟法</button>
+        <div class="methods-list" id="methods-list" hidden>
+          <button class="menu-item" data-open="page-pomodoro">
+            <span class="menu-icon" style="--c:#4f8cff">番</span>
+            <span class="menu-text"><b>番茄钟</b><i>专注 25 分钟 + 休息 5 分钟</i></span>
+          </button>
+          <button class="menu-item" data-open="page-mono">
+            <span class="menu-icon" style="--c:#22c3aa">单</span>
+            <span class="menu-text"><b>单核工作法</b><i>每小时只专注一件事</i></span>
+          </button>
+          <button class="menu-item" data-open="page-dual">
+            <span class="menu-icon" style="--c:#ff6b9d">双</span>
+            <span class="menu-text"><b>双闹钟法</b><i>轻唤一次，强制起床一次</i></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 4. 番茄钟页（从 闹钟法 进入） ===== -->
+    <section class="page page-sub page-pomodoro" id="page-pomodoro" data-phase="focus">
+      <header class="topbar">
+        <button class="back" data-back="page-alarm">‹</button>
+        <span>番茄钟</span>
+      </header>
+      <div class="sub-body">
+        <span class="phase-badge" id="pomo-phase">专注</span>
+        <div class="big-time" id="pomo-display">25:00</div>
+        <p class="hint" id="pomo-round">第 1 / 4 个番茄</p>
+        <p class="rules">规则：专注 25 分钟，短休 5 分钟；<br>每完成 4 个番茄，长休 15 分钟。</p>
+        <div class="btn-row">
+          <button class="btn-primary" id="pomo-btn">开始</button>
+          <button class="btn-ghost" id="pomo-reset">重置</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 5. 单核工作法页（从 闹钟法 进入） ===== -->
+    <section class="page page-sub" id="page-mono">
+      <header class="topbar">
+        <button class="back" data-back="page-alarm">‹</button>
+        <span>单核工作法</span>
+      </header>
+      <div class="sub-body">
+        <input class="task-input" id="mono-task" type="text" maxlength="30"
+               placeholder="这一小时，只做哪一件事？">
+        <div class="big-time" id="mono-display">--:--:--</div>
+        <p class="hint" id="mono-status">写下这一小时里最重要的那一件事</p>
+
+        <div class="chips" id="mono-presets">
+          <button data-min="25">25 分钟</button>
+          <button data-min="30">30 分钟</button>
+          <button data-min="45">45 分钟</button>
+          <button data-min="60">1 小时</button>
+        </div>
+
+        <div class="duration-row">
+          <label>时 <input id="mono-h" type="number" min="0" max="23" value="0"></label>
+          <label>分 <input id="mono-m" type="number" min="0" max="59" value="30"></label>
+          <label>秒 <input id="mono-s" type="number" min="0" max="59" value="0"></label>
+        </div>
+
+        <button class="btn-primary" id="mono-btn">开始</button>
+
+        <p class="rules">单核工作法：每个小时，选定唯一要事，<br>用整段剩余时间只做它，其他一切靠边。</p>
+      </div>
+    </section>
+
+    <!-- ===== 6. 双闹钟法页（从 闹钟法 进入） ===== -->
+    <section class="page page-sub" id="page-dual">
+      <header class="topbar">
+        <button class="back" data-back="page-alarm">‹</button>
+        <span>双闹钟法</span>
+      </header>
+      <div class="sub-body">
+        <div class="big-time" id="dual-display">--:--:--</div>
+        <p class="hint" id="dual-status">设好第一闹钟时长，点开始</p>
+
+        <div class="field-label">第一闹钟（叫醒）</div>
+        <div class="duration-row">
+          <label>时 <input id="dual-h" type="number" min="0" max="23" value="0"></label>
+          <label>分 <input id="dual-m" type="number" min="0" max="59" value="30"></label>
+          <label>秒 <input id="dual-s" type="number" min="0" max="59" value="0"></label>
+        </div>
+
+        <div class="field-label">第二闹钟间隔（强制起床）</div>
+        <div class="chips" id="dual-gaps">
+          <button data-gap="5" class="sel">5 分钟</button>
+          <button data-gap="10">10 分钟</button>
+          <button data-gap="15">15 分钟</button>
+        </div>
+
+        <button class="btn-primary" id="dual-btn">开始</button>
+
+        <p class="rules">双闹钟法：第一声轻唤提醒，<br>间隔一到，第二声强制响起，必须起床。</p>
+      </div>
+    </section>
+
+    <!-- ===== 7. 秒表页 ===== -->
+    <section class="page page-sub" id="page-stopwatch">
+      <header class="topbar">
+        <button class="back" data-back="page-functions">‹</button>
+        <span>秒表</span>
+      </header>
+      <div class="sub-body">
+        <div class="big-time" id="sw-display">00:00.00</div>
+        <div class="btn-row">
+          <button class="btn-primary" id="sw-btn">开始</button>
+          <button class="btn-ghost" id="sw-lap" disabled>计次</button>
+          <button class="btn-ghost" id="sw-reset">重置</button>
+        </div>
+        <div class="lap-list" id="sw-laps"></div>
+      </div>
+    </section>
+
+    <!-- ===== 8. 倒计时页 ===== -->
+    <section class="page page-sub" id="page-countdown">
+      <header class="topbar">
+        <button class="back" data-back="page-functions">‹</button>
+        <span>倒计时</span>
+      </header>
+      <div class="sub-body">
+        <div class="big-time" id="countdown-display">--:--:--</div>
+        <p class="hint" id="countdown-status">设置时长，点开始</p>
+
+        <div class="chips" id="countdown-presets">
+          <button data-min="1">1 分钟</button>
+          <button data-min="3">3 分钟</button>
+          <button data-min="5">5 分钟</button>
+          <button data-min="10">10 分钟</button>
+          <button data-min="15">15 分钟</button>
+          <button data-min="30">30 分钟</button>
+          <button data-min="60">1 小时</button>
+        </div>
+
+        <div class="duration-row">
+          <label>时 <input id="countdown-h" type="number" min="0" max="23" value="0"></label>
+          <label>分 <input id="countdown-m" type="number" min="0" max="5" value="5"></label>
+          <label>秒 <input id="countdown-s" type="number" min="0" max="59" value="0"></label>
+        </div>
+
+        <button class="btn-primary" id="countdown-btn">开始</button>
+      </div>
+    </section>
+
+    <!-- ===== 9. 我的页：账户选项 ===== -->
+    <section class="page page-account" id="page-account">
+      <h2 class="page-title">我的</h2>
+      <div class="profile">
+        <div class="avatar">橙</div>
+        <b>小橙子</b>
+        <i>本地版 · 数据仅保存在本机</i>
+      </div>
+      <div class="menu">
+        <button class="menu-item" disabled>
+          <span class="menu-icon">设</span>
+          <span class="menu-text"><b>设置</b><i>待开放</i></span>
+        </button>
+        <button class="menu-item" disabled>
+          <span class="menu-icon">关</span>
+          <span class="menu-text"><b>关于</b><i>待开放</i></span>
+        </button>
+      </div>
+      <button class="danger-btn" id="clear-data-btn">清空所有本地数据</button>
+
+      <!-- 二次确认弹窗 -->
+      <div class="confirm-overlay" id="confirm-overlay" hidden>
+        <div class="confirm-dialog">
+          <p class="confirm-msg">确定要清空所有闹钟和徒步记录吗？<br>此操作不可逆。</p>
+          <div class="confirm-actions">
+            <button class="btn-ghost" id="confirm-cancel">取消</button>
+            <button class="btn-danger" id="confirm-ok">确定清空</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 底部导航 ===== -->
+    <nav class="tabs">
+      <button class="tab active" data-page="page-clock">时钟</button>
+      <button class="tab" data-page="page-functions">功能</button>
+      <button class="tab" data-page="page-account">我的</button>
+    </nav>
+
+  </main>
+
+  <!-- 安装提示条：浏览器触发 beforeinstallprompt 时显示 -->
+  <div class="install-banner" id="install-banner" hidden>
+    <span class="install-text">将应用添加到主屏幕，享受全屏离线体验</span>
+    <div class="install-actions">
+      <button class="install-btn" id="install-btn">安装</button>
+      <button class="install-dismiss" id="install-dismiss" aria-label="关闭">×</button>
+    </div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/clock.js"></script>
+  <script src="js/alarm.js"></script>
+  <script src="js/countdown.js"></script>
+  <script src="js/mono.js"></script>
+  <script src="js/dual.js"></script>
+  <script src="js/stopwatch.js"></script>
+  <script src="js/pomodoro.js"></script>
+  <script src="js/routes.js"></script>
+  <script src="js/hike.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
